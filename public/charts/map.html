@@ -2,6 +2,7 @@
 <meta charset="utf-8">
 <script src="/javascripts/vendor/d3.min.js"></script>
 <script src="/javascripts/vendor/topojson.min.js"></script>
+<script src="/javascripts/vendor/cartogram.js"></script>
 
 <body>
 
@@ -34,8 +35,23 @@ var projection = d3.geo.mercator()
   .center([139.4452884,35.7106589])
   .scale(zoom.scale())
   .translate(zoom.translate());
-var path = d3.geo.path().projection(projection);
 
+var carto = d3.cartogram()
+  .projection(projection)
+  .properties(function(d)
+  {
+    return d.properties;
+  })
+  .value(function(d)
+  {
+    if (d.properties.value === void 0)
+    {
+      d.properties.value = Math.random()*100;
+    }
+    return d.properties.value;
+  });
+
+var path = d3.geo.path().projection(projection);
 
 d3.json('/data/geo/tokyo.topojson',function(error,data)
 {
@@ -43,13 +59,16 @@ d3.json('/data/geo/tokyo.topojson',function(error,data)
   {
     return;
   }
-  var features = topojson.feature(data, data.objects.tokyo).features;
+  var topology = data;
+  var geometries = topology.objects.tokyo.geometries;
+  var features = carto.features(topology, geometries);
+
   geoLayer.selectAll('path')
     .data(features)
     .enter().append('path')
-    .attr("fill", '#ccc')
-    .attr('stroke', '#888')
-    .attr('stroke-width', '1.2px')
+    .attr("fill", '#888')
+    .attr('stroke', '#FFF')
+    .attr('stroke-width', '0.5px')
     .attr('d', path)
     .on('mouseover', function(d,i)
     {
