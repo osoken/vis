@@ -9,11 +9,13 @@
 var width = 960;
 var height = 500;
 
+//create SVG element
 var svg = d3.select('body').append('svg')
   .attr('width', width)
   .attr('height', height);
 
 var geoLayer = svg.append('g');
+
 
 var zoom = d3.behavior.zoom()
   .on('zoom', function()
@@ -32,13 +34,14 @@ var projection = d3.geo.mercator()
   .translate(zoom.translate());
 var path = d3.geo.path().projection(projection);
 
-
+//Load in TopoJSON data
 d3.json('/data/geo/tokyo.topojson',function(error,data)
 {
   if (error)
   {
     return;
   }
+  //Bind data and create one path per TopoJSON feature
   var features = topojson.feature(data, data.objects.tokyo).features;
   geoLayer.selectAll('path')
     .data(features)
