@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<script src="/javascripts/old/d3.v2.min.js"></script>
+<script src="/javascripts/old/topojson.js"></script>
+<script src="/javascripts/old/cartogram.js"></script>
+<body>
+<script>
+var width = 960;
+var height = 500;
+
+var svg = d3.select('body').append('svg')
+  .attr('width', width)
+  .attr('height', height);
+
+var graphLayer = svg.append("g");
+
+var zoom = d3.behavior.zoom()
+  .on('zoom', function()
+  {
+    graphLayer.attr('transform', 'translate('+zoom.translate()[0]+','+zoom.translate()[1]+') scale('+zoom.scale()+')')
+  });
+
+svg.call(zoom);
+var proj = d3.geo.albers()
+  .origin([139.4452884,35.7106589])
+  .scale(1000)
+  .translate([960/2, 500/2]);
+
+var topology;
+var geometries;
+var carto_features;
+var map;
+
+var carto = d3.cartogram()
+  .projection(proj)
+  .properties(function (d) {
+    return d.properties;
+  })
+  .value(function(d) {
+		return Math.random(); //ランダムに変形
+	});
+
+
+d3.json("/data/geo/tokyo.topojson", function (data) {
+
+  topology = data;
+   geometries = topology.objects.tokyo.geometries;
+
+  var features = carto.features(topology, geometries);
+  var path = d3.geo.path().projection(proj);
+  if (carto_features == undefined)
+    carto_features = carto(topology, geometries).features;
+
+  map = graphLayer.selectAll('path').data(carto_features)
+    .enter()
+    .append("path")
+    .attr({
+      stroke: "white",
+      "stroke-width": 1
+    })
+    .attr("class", function(d){ return 'region';})
+    .attr("d", path);
+
+});
+
+</script>
