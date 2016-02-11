@@ -14,6 +14,7 @@ var svg = d3.select('body').append('svg')
   .attr('height', height);
 
 var geoLayer = svg.append('g');
+var infoLayer = svg.append('g');
 
 var zoom = d3.behavior.zoom()
   .on('zoom', function()
@@ -46,6 +47,7 @@ d3.json('/data/geo/tokyo.topojson',function(error,data)
     .attr("fill", '#ccc')
     .attr('stroke', '#888')
     .attr('stroke-width', '1.2px')
-    .attr('d', path)
+    .attr('d', path);
+
 });
 </script>
