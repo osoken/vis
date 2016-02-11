@@ -14,6 +14,10 @@ var svg = d3.select('body').append('svg')
   .attr('height', height);
 
 var geoLayer = svg.append('g');
+var infoLayer = svg.append('g');
+infoLayer.append('rect').attr({stroke:'none',fill:'rgba(0,0,0,0.75)'});
+var infoText = infoLayer.append('g');
+infoLayer.current = null;
 
 var zoom = d3.behavior.zoom()
   .on('zoom', function()
@@ -47,5 +51,16 @@ d3.json('/data/geo/tokyo.topojson',function(error,data)
     .attr('stroke', '#888')
     .attr('stroke-width', '1.2px')
     .attr('d', path)
+    .on('mouseover', function(d,i)
+    {
+      if (infoLayer.current != i)
+      {
+        infoText.selectAll('text').remove();
+        infoText.selectAll('text').data(d3.entries(d.properties)).enter().append('text')
+          .text(function(d){return d.key + ': ' + d.value;}).attr({x:10,'fill':'#FFF','stroke':'none','font-size':16,'font-family':'sans-serif'})
+          .attr('y', function(d,i){return (i+2)*16;});
+        infoLayer.select('rect').attr(infoText.node().getBBox());
+      }
+    });
 });
 </script>
