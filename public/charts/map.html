@@ -2,7 +2,6 @@
 <meta charset="utf-8">
 <script src="/javascripts/vendor/d3.min.js"></script>
 <script src="/javascripts/vendor/topojson.min.js"></script>
-<script src="/javascripts/vendor/cartogram.js"></script>
 
 <body>
 
@@ -36,32 +35,29 @@ var projection = d3.geo.mercator()
   .scale(zoom.scale())
   .translate(zoom.translate());
 
-var carto = d3.cartogram()
-  .projection(projection)
-  .properties(function(d)
-  {
-    return d.properties;
-  })
-  .value(function(d)
-  {
-    if (d.properties.value === void 0)
-    {
-      d.properties.value = Math.random()*100;
-    }
-    return d.properties.value;
-  });
-
 var path = d3.geo.path().projection(projection);
 
-d3.json('/data/geo/tokyo.topojson',function(error,data)
+d3.json("/data/geo/ku.topojson", function (error, data)
 {
   if (error)
   {
     return;
   }
-  var topology = data;
-  var geometries = topology.objects.tokyo.geometries;
-  var features = carto.features(topology, geometries);
+  var key = d3.keys(data.objects)[0];
+  var features = topojson.feature(data, data.objects[key]).features;
+	var fc = { "type": "FeatureCollection","features":features};
+	var b = path.bounds(fc);
+	projection.center(projection.invert(path.centroid(fc)));
+	b = path.bounds(fc);
+	zoom.scale(
+		Math.min(
+			((width/2*zoom.scale())/(width/2-b[0][0])),
+			((height/2*zoom.scale())/(height/2-b[0][1])),
+			((width/2*zoom.scale())/(b[1][0]-width/2)),
+			((height/2*zoom.scale())/(b[1][1]-height/2))
+		)
+	);
+	projection.scale(zoom.scale());
 
   geoLayer.selectAll('path')
     .data(features)
