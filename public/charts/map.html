@@ -34,22 +34,37 @@ var projection = d3.geo.mercator()
   .center([139.4452884,35.7106589])
   .scale(zoom.scale())
   .translate(zoom.translate());
+
 var path = d3.geo.path().projection(projection);
 
-
-d3.json('/data/geo/tokyo.topojson',function(error,data)
+d3.json("/data/geo/ku.topojson", function (error, data)
 {
   if (error)
   {
     return;
   }
-  var features = topojson.feature(data, data.objects.tokyo).features;
+  var key = d3.keys(data.objects)[0];
+  var features = topojson.feature(data, data.objects[key]).features;
+	var fc = { "type": "FeatureCollection","features":features};
+	var b = path.bounds(fc);
+	projection.center(projection.invert(path.centroid(fc)));
+	b = path.bounds(fc);
+	zoom.scale(
+		Math.min(
+			((width/2*zoom.scale())/(width/2-b[0][0])),
+			((height/2*zoom.scale())/(height/2-b[0][1])),
+			((width/2*zoom.scale())/(b[1][0]-width/2)),
+			((height/2*zoom.scale())/(b[1][1]-height/2))
+		)
+	);
+	projection.scale(zoom.scale());
+
   geoLayer.selectAll('path')
     .data(features)
     .enter().append('path')
-    .attr("fill", '#ccc')
-    .attr('stroke', '#888')
-    .attr('stroke-width', '1.2px')
+    .attr("fill", '#888')
+    .attr('stroke', '#FFF')
+    .attr('stroke-width', '0.5px')
     .attr('d', path)
     .on('mouseover', function(d,i)
     {

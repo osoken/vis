@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-<script src="/javascripts/old/d3.v2.min.js"></script>
-<script src="/javascripts/old/topojson.js"></script>
-<script src="/javascripts/old/cartogram.js"></script>
+<script src="/javascripts/vendor/d3.min.js"></script>
+<script src="/javascripts/vendor/topojson.min.js"></script>
+<script src="/javascripts/vendor/cartogram.js"></script>
 <body>
 <script>
 var width = 960;
@@ -12,55 +12,93 @@ var svg = d3.select('body').append('svg')
   .attr('width', width)
   .attr('height', height);
 
-var graphLayer = svg.append("g");
+var geoLayer = svg.append('g');
+var infoLayer = svg.append('g');
+infoLayer.append('rect').attr({stroke:'none',fill:'rgba(0,0,0,0.75)'});
+var infoText = infoLayer.append('g');
+infoLayer.current = null;
 
 var zoom = d3.behavior.zoom()
   .on('zoom', function()
   {
-    graphLayer.attr('transform', 'translate('+zoom.translate()[0]+','+zoom.translate()[1]+') scale('+zoom.scale()+')')
+    path.projection().translate(zoom.translate()).scale(zoom.scale());
+    geoLayer.selectAll('path').attr('d', path);
   });
 
 svg.call(zoom);
-var proj = d3.geo.albers()
-  .origin([139.4452884,35.7106589])
-  .scale(1000)
-  .translate([960/2, 500/2]);
 
-var topology;
-var geometries;
-var carto_features;
-var map;
+zoom.translate([width/2,height/2]).scale(150);
+
+var projection = d3.geo.mercator()
+  .scale(zoom.scale())
+  .translate(zoom.translate());
+var path = d3.geo.path().projection(projection);
 
 var carto = d3.cartogram()
-  .projection(proj)
-  .properties(function (d) {
+  .projection(projection)
+  .properties(function (d)
+	{
     return d.properties;
   })
-  .value(function(d) {
-		return Math.random(); //ランダムに変形
+  .value(function(d)
+	{
+		return 10;
 	});
 
-
-d3.json("/data/geo/tokyo.topojson", function (data) {
-
-  topology = data;
-   geometries = topology.objects.tokyo.geometries;
-
-  var features = carto.features(topology, geometries);
-  var path = d3.geo.path().projection(proj);
-  if (carto_features == undefined)
-    carto_features = carto(topology, geometries).features;
-
-  map = graphLayer.selectAll('path').data(carto_features)
-    .enter()
-    .append("path")
-    .attr({
-      stroke: "white",
-      "stroke-width": 1
+d3.json("/data/geo/ku.topojson", function (error, data)
+{
+  if (error)
+  {
+    return;
+  }
+  var key = d3.keys(data.objects)[0];
+  var features = topojson.feature(data, data.objects[key]).features;
+	var fc = { "type": "FeatureCollection","features":features};
+	var b = path.bounds(fc);
+	projection.center(projection.invert(path.centroid(fc)));
+	b = path.bounds(fc);
+	zoom.scale(
+		Math.min(
+			((width/2*zoom.scale())/(width/2-b[0][0])),
+			((height/2*zoom.scale())/(height/2-b[0][1])),
+			((width/2*zoom.scale())/(b[1][0]-width/2)),
+			((height/2*zoom.scale())/(b[1][1]-height/2))
+		)
+	);
+	projection.scale(zoom.scale());
+  geoLayer.selectAll('path')
+    .data(features)
+    .enter().append('path')
+    .attr("fill", '#ccc')
+    .attr('stroke', '#888')
+    .attr('stroke-width', 1.2)
+    .attr('d', path)
+    .on('mouseover', function(d,i)
+    {
+      if (infoLayer.current != i)
+      {
+        infoText.selectAll('text').remove();
+        infoText.selectAll('text').data(d3.entries(d.properties)).enter().append('text')
+          .text(function(d){return d.key + ': ' + d.value;}).attr({x:10,'fill':'#FFF','stroke':'none','font-size':16,'font-family':'sans-serif'})
+          .attr('y', function(d,i){return (i+2)*16;});
+        infoLayer.select('rect').attr(infoText.node().getBBox());
+				d3.select(this).attr('stroke-width', 4);
+				infoLayer.current = i;
+      }
     })
-    .attr("class", function(d){ return 'region';})
-    .attr("d", path);
+		.on('mouseout', function(d,i)
+		{
+			d3.select(this).attr('stroke-width', 1.2);
+			infoLayer.current = void 0;
+		});
+	setTimeout(function()
+	{
+		features = carto(data, data.objects[key].geometries).features;
+		path = carto.path;
+		geoLayer.selectAll('path')
+			.data(features).transition().duration(10000)
+		  .attr('d', path);
 
+	}, 2000)
 });
-
 </script>
