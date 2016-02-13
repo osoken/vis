@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<meta charset='utf-8'>
+<script src='/javascripts/vendor/d3.min.js'></script>
+
+<body>
+
+<script>
+var width = 960;
+var height = 500;
+var innerRadius = Math.min(width, height) * .41;
+var outerRadius = innerRadius * 1.1;
+
+var svg = d3.select('body').append('svg')
+  .attr('width', width)
+  .attr('height', height);
+
+var graphLayer = svg.append('g').attr('transform', 'translate('+(width/2)+','+(height/2)+')');
+
+var color = d3.scale.category10();
+
+d3.csv('/data/relation/toshin.csv', function(err,data)
+{
+  if (err != null)
+  {
+    console.log(err);
+    return;
+  }
+  if (data.length <= 0)
+  {
+    return;
+  }
+  var keys = d3.keys(data[0]).filter(function(d){return d!='';});
+
+  var nameIdxMap = {};
+  keys.forEach(function(d,i){nameIdxMap[d]=i;});
+  var matrix = d3.range(keys.length).map(function(d){return null;});
+  data.forEach(function(d){
+    var idx = nameIdxMap[d['']];
+    matrix[idx] = keys.map(function(k){return +d[k];});
+  });
+  var chord = d3.layout.chord()
+    .matrix(matrix);
+
+  var groups = graphLayer.selectAll('g.group').data(chord.groups).enter().append('g').attr('class','group')
+    .on('mouseover', function(d){d3.select(this).select('text').attr('visibility','visible')})
+    .on('mouseout', function(d){d3.select(this).select('text').attr('visibility','hidden')})
+
+  groups.append('path').attr('class','group')
+    .style('fill', function(d) { return color(d.index); })
+    .style('stroke', function(d) { return color(d.index); })
+    .attr('d', d3.svg.arc().innerRadius(innerRadius).outerRadius(outerRadius));
+
+  groups.append('text').text(function(d,i){return keys[i];})
+    .attr('x', function(d){return outerRadius*Math.cos((d.startAngle+d.endAngle)/2-Math.PI/2);})
+    .attr('y', function(d){return outerRadius*Math.sin((d.startAngle+d.endAngle)/2-Math.PI/2);})
+    .attr('text-anchor',function(d){return (d.startAngle+d.endAngle)/2>Math.PI ? 'end':'start';})
+    .attr('visibility', 'hidden');
+
+  graphLayer.append('g').selectAll('path.chord')
+    .data(chord.chords)
+    .enter().append('path').attr('class','chord')
+      .attr('d', d3.svg.chord().radius(innerRadius))
+      .style('fill', function(d) { return color(d.target.index); });
+
+
+});
+</script>
