@@ -12,17 +12,17 @@ var svg = d3.select('body').append('svg')
   .attr('width', width)
   .attr('height', height);
 
-var margin = {top: 50, left: 1, right: 1, bottom: 1};
+var margin = {top: width/24,left: 1, right: 1, bottom: 1};
 
 var graphWidth = width - margin.left - margin.right;
 var graphHeight = height - margin.top - margin.bottom;
 
+svg.append('rect').attr({x:0,y:0,width:width,height:height,fill:'black',stroke:'none'});
 var graphLayer = svg.append('g').attr('transform','translate('+margin.left+','+margin.top+')');
 
 d3.select('html')
   .on('keydown', function()
   {
-    console.log(d3.event.keyCode);
     if (d3.event.keyCode == 68)
     {
       svg2canvas(svg.node(), d3.select('body').node(), function(err,canvas)
@@ -35,17 +35,6 @@ d3.select('html')
         tag.remove();
         canvas.remove();
       });
-    }
-    if (d3.event.keyCode == 66)
-    {
-      if (svg.select('rect.bg').size() > 0)
-      {
-        svg.select('rect.bg').remove();
-      }
-      else
-      {
-        svg.insert('rect','*').attr({class:'bg',x:0,y:0,width:width,height:height,fill:'black',stroke:'none'});
-      }
     }
   });
 
@@ -92,7 +81,7 @@ d3.csv('/data/timeseries/hr.csv', function(err,data)
   valueScale.domain(valueExtent);
 
   graphLayer.selectAll('g').data(matrix)
-    .enter().append('g').attr('transform', function(d,i){return 'translate(0,'+dateScale(dateValues[i])+')';}).attr('stroke', function(d,i){return color(dateValues[i]);})
-    .append('path').attr('d',d3.svg.line().x(function(d,i){return timeScale(timeValues[i]);}).y(function(d){return valueScale(d);})).attr('fill','none').attr('stroke-width',1);
+    .enter().append('g').attr('transform', function(d,i){return 'translate(0,'+dateScale(dateValues[i])+')';}).attr('stroke', function(d,i){return color(dateValues[i]);}).attr('fill', function(d,i){return color(dateValues[i]);})
+    .append('path').attr('d',d3.svg.area().x(function(d,i){return timeScale(timeValues[i]);}).y1(function(d){return valueScale(d);}).y0(function(d){return valueScale(fill)})).attr('stroke-width',1).attr('opacity',0.9);
 });
 </script>
