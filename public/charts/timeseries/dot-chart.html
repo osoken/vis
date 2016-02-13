@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<meta charset='utf-8'>
+<script src='/javascripts/vendor/d3.min.js'></script>
+<script src='/javascripts/svg2canvas.js'></script>
+<body>
+
+<script>
+var width = 1920;
+var height = 1080;
+
+var svg = d3.select('body').append('svg')
+  .attr('width', width)
+  .attr('height', height);
+
+var margin = {top: 10, left: 10, right: 10, bottom: 10};
+
+var graphWidth = width - margin.left - margin.right;
+var graphHeight = height - margin.top - margin.bottom;
+
+var graphLayer = svg.append('g').attr('transform','translate('+margin.left+','+margin.top+')');
+
+d3.select('html')
+  .on('keydown', function()
+  {
+    if (d3.event.keyCode == 68)
+    {
+      svg2canvas(svg.node(), d3.select('body').node(), function(err,canvas)
+      {
+        var tag = d3.select('body').append('a')
+          .attr('type','application/octet-stream')
+          .attr('href', canvas.toDataURL('image/png'))
+          .attr('download','image.png');
+        tag.node().click();
+        tag.remove();
+        canvas.remove();
+      });
+    }
+    if (d3.event.keyCode == 66)
+    {
+      if (svg.select('rect.bg').size() > 0)
+      {
+        svg.select('rect.bg').remove();
+      }
+      else
+      {
+        svg.insert('rect','*').attr({class:'bg',x:0,y:0,width:width,height:height,fill:'black',stroke:'none'});
+      }
+    }
+  });
+
+var dateFormat = d3.time.format('%Y-%m-%d');
+var timeFormat = d3.time.format('%H:%M:%S');
+var dateScale = d3.time.scale().range([0,graphHeight]);
+var timeScale = d3.time.scale().range([0,graphWidth]);
+var valueScale = d3.scale.linear().range([0,margin.top]);
+
+var hue = d3.scale.ordinal().rangePoints([0,360]);
+var color = function(d){return d3.hsl(hue(d), 0.5,0.5);};
+
+var type = function(d)
+{
+  d.date = dateFormat.parse(d.date);
+  d.time = timeFormat.parse(d.time);
+  d.value = +d.value;
+  return d;
+}
+
+d3.csv('/data/timeseries/hr.csv', type, function(err,data)
+{
+  if (err != null)
+  {
+    console.log(err);
+    return;
+  }
+  if (data.length <= 0)
+  {
+    return;
+  }
+
+  dateScale.domain(d3.extent(data,function(d){return d.date;}));
+  hue.domain(d3.set(data.map(function(d){return d.date;})).values());
+  timeScale.domain(d3.extent(data,function(d){return d.time;}));
+  valueScale.domain(d3.extent(data, function(d){return d.value;}));
+
+  graphLayer.selectAll('g').data(data)
+    .enter().append('circle')
+      .attr('cx', function(d){return timeScale(d.time);})
+      .attr('cy', function(d){return dateScale(d.date);})
+      .attr('r', function(d){return valueScale(d.value);}).attr('stroke','none').attr('fill', function(d){return color(d.date);});
+});
+</script>

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <meta charset='utf-8'>
 <script src='/javascripts/vendor/d3.min.js'></script>
-
+<script src='/javascripts/svg2canvas.js'></script>
 <body>
 
 <script>
-var width = 960;
-var height = 500;
+var width = 640;
+var height = 640;
 var innerRadius = Math.min(width, height) * .41;
 var outerRadius = innerRadius * 1.1;
 
@@ -17,6 +17,24 @@ var svg = d3.select('body').append('svg')
 var graphLayer = svg.append('g').attr('transform', 'translate('+(width/2)+','+(height/2)+')');
 
 var color = d3.scale.category10();
+
+d3.select('html')
+  .on('keydown', function()
+  {
+    if (d3.event.keyCode == 68)
+    {
+      svg2canvas(svg.node(), d3.select('body').node(), function(err,canvas)
+      {
+        var tag = d3.select('body').append('a')
+          .attr('type','application/octet-stream')
+          .attr('href', canvas.toDataURL('image/png'))
+          .attr('download','image.png');
+        tag.node().click();
+        tag.remove();
+        canvas.remove();
+      });
+    }
+  });
 
 d3.csv('/data/relation/toshin.csv', function(err,data)
 {
