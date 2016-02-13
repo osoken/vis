@@ -50,7 +50,7 @@
               i1++;
             }
             projectedArcs[i2++]=out1;
-            
+
           }
 
       // path with identity projection
@@ -201,7 +201,7 @@
         properties: properties.call(null, geom, topology),
         geometry: {
           type: geom.type,
-          coordinates: topojson.object(topology, geom).coordinates
+          coordinates: topojson.feature(topology, geom).geometry.coordinates
         }
       };
     };
@@ -290,7 +290,7 @@
         ? o
         : copyObject(o);
   }
-  
+
   function copyObject(o) {
     var obj = {};
     for (var k in o) obj[k] = copy(o[k]);
