@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<meta charset='utf-8'>
+<script src='/javascripts/vendor/d3.min.js'></script>
+<script src='/javascripts/svg2canvas.js'></script>
+<body>
+
+<script>
+var width = 1920;
+var height = 1080;
+
+var svg = d3.select('body').append('svg')
+  .attr('width', width)
+  .attr('height', height);
+
+var margin = {top: 50, left: 10, right: 10, bottom: 1};
+
+var graphWidth = width - margin.left - margin.right;
+var graphHeight = height - margin.top - margin.bottom;
+
+var graphLayer = svg.append('g').attr('transform','translate('+margin.left+','+margin.top+')');
+
+d3.select('html')
+  .on('keydown', function()
+  {
+    if (d3.event.keyCode == 68)
+    {
+      svg2canvas(svg.node(), d3.select('body').node(), function(err,canvas)
+      {
+        var tag = d3.select('body').append('a')
+          .attr('type','application/octet-stream')
+          .attr('href', canvas.toDataURL('image/png'))
+          .attr('download','image.png');
+        tag.node().click();
+        tag.remove();
+        canvas.remove();
+      });
+    }
+  });
+
+var dateFormat = d3.time.format('%Y-%m-%d');
+var timeFormat = d3.time.format('%H:%M:%S');
+var dateScale = d3.time.scale().range([0,graphHeight]);
+var timeScale = d3.time.scale().range([0,graphWidth]);
+var valueScale = d3.scale.linear().range([0,-margin.top]);
+
+d3.csv('/data/timeseries/hr.csv', function(err,data)
+{
+  if (err != null)
+  {
+    console.log(err);
+    return;
+  }
+  if (data.length <= 0)
+  {
+    return;
+  }
+  var times = d3.set(data.map(function(d){return d.time;})).values().sort();
+  var dates = d3.set(data.map(function(d){return d.date;})).values().sort();
+  var timeIndexMap = {};
+  times.forEach(function(d,i){return timeIndexMap[d] = i;});
+  var dateIndexMap = {};
+  dates.forEach(function(d,i){return dateIndexMap[d] = i;});
+  var fill = 40;
+  var matrix = dates.map(function(date){return times.map(function(time){return fill;})});
+  var valueExtent = [fill,fill];
+  data.forEach(function(d)
+  {
+    matrix[dateIndexMap[d.date]][timeIndexMap[d.time]] = +d.value;
+    valueExtent = [Math.min(valueExtent[0],+d.value),Math.max(valueExtent[1],+d.value)];
+  });
+  var timeValues = times.map(function(d){return timeFormat.parse(d);});
+  var dateValues = dates.map(function(d){return dateFormat.parse(d);});
+
+  dateScale.domain(d3.extent(dateValues,function(d){return d;}));
+  timeScale.domain(d3.extent(timeValues,function(d){return d;}));
+  valueScale.domain(valueExtent);
+
+  graphLayer.selectAll('g').data(matrix)
+    .enter().append('g').attr('transform', function(d,i){return 'translate(0,'+dateScale(dateValues[i])+')';})
+      .append('path').attr('d',d3.svg.line().x(function(d,i){return timeScale(timeValues[i]);}).y(function(d){return valueScale(d);})).attr('fill','none').attr('stroke','#000');
+});
+</script>
