@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<meta charset='utf-8'>
+<script src='/javascripts/vendor/d3.min.js'></script>
+<script src='/javascripts/svg2canvas.js'></script>
+<body>
+<script>
+
+var width = 960;
+var height = 500;
+var margin = {top: 40, left: 40, right: 40, bottom: 40};
+
+var graphWidth = width - margin.left - margin.right;
+var graphHeight = height - margin.top - margin.bottom;
+
+var tree = d3.layout.tree()
+  .size([ graphWidth, graphHeight ]);
+
+var diagonal = d3.svg.diagonal()
+    .projection(function(d) { return [d.x,d.y]; });
+
+var svg = d3.select('body').append('svg').attr({width:width,height:height});
+
+var graphLayer = svg.append('g').attr('transform','translate('+margin.left+','+margin.top+')');
+
+var sizeScale = d3.scale.sqrt().range([2,16]);
+var widthScale = d3.scale.linear().range([1,8]);
+var hueScale = d3.scale.ordinal().rangePoints([0,360]);
+
+var init = function(n)
+{
+  if (n == null)
+  {
+    return 0;
+  }
+  n.timestamp = new Date(n.timestamp);
+  if (n.ext !== void 0)
+  {
+    return n.ext;
+  }
+  if (n.children === void 0)
+  {
+    n.size = n.size || 0;
+    n.count = 1;
+    if (n.name.indexOf('.') == -1)
+    {
+      n.ext = [{count:1,size:n.size,value:''}];
+      return n.ext;
+    }
+    n.ext = [{count:1,size:n.size,value:n.name.replace(/.*\.(.+)/,'$1')}];
+    return n.ext;
+  }
+  n.children = n.children.filter(function(d){return d!=null;});
+  n.children.forEach(function(d){init(d);});
+  n.size = n.size || d3.sum(n.children, function(d){return d.size;});
+  n.count = d3.sum(n.children, function(d){return d.count;});
+  var tmp = {};
+  n.children.forEach(function(c)
+  {
+    c.ext.forEach(function(d)
+    {
+      if (tmp[d.value] === void 0)
+      {
+        tmp[d.value] = {count:0,size:0};
+      }
+      tmp[d.value].count += d.count;
+      tmp[d.value].size += d.size;
+    });
+  });
+  n.ext = d3.entries(tmp).map(function(d)
+  {
+    return {
+      value: d.key,
+      count: d.value.count,
+      size: d.value.size
+    };
+  });
+  return n.ext;
+}
+
+d3.select('html')
+  .on('keydown', function()
+  {
+    if (d3.event.keyCode == 68)
+    {
+      svg2canvas(svg.node(), d3.select('body').node(), function(err,canvas)
+      {
+        var tag = d3.select('body').append('a')
+          .attr('type','application/octet-stream')
+          .attr('href', canvas.toDataURL('image/png'))
+          .attr('download','image.png');
+        tag.node().click();
+        tag.remove();
+        canvas.remove();
+      });
+    }
+    if (d3.event.keyCode == 66)
+    {
+      if (svg.select('rect.bg').size() > 0)
+      {
+        svg.select('rect.bg').remove();
+      }
+      else
+      {
+        svg.insert('rect','*').attr({class:'bg',x:0,y:0,width:width,height:height,fill:'black',stroke:'none'});
+      }
+    }
+  });
+
+d3.json('/data/tree/file.json', function(err, data)
+{
+  if (err != null)
+  {
+    console.log(err);
+    return;
+  }
+  init(data);
+  var nodes = tree.nodes(data);
+  var links = tree.links(nodes);
+  sizeScale.domain([0,data.size]);
+  widthScale.domain([0,d3.max(links,function(d){return d.target.size;})]);
+  hueScale.domain(data.ext.map(function(d){return d.value;}));
+  var color = function(d)
+  {
+    if (d.size == 0)
+    {
+      if (d.count == 0)
+      {
+        return '#000';
+      }
+      return d3.hsl(d3.sum(d.ext, function(dd){return dd.count/d.count * hueScale(dd.value);}),0.75,0.5);
+    }
+    return d3.hsl(d3.sum(d.ext, function(dd){return dd.size/d.size * hueScale(dd.value);}),0.75,0.5);
+  };
+
+  graphLayer.selectAll('path.link')
+    .data(links).enter().append('path')
+      .attr({
+        class:'link',
+        stroke:function(d){return color(d.target);},
+        fill:'none',
+        'stroke-width':function(d){return widthScale(d.target.size);},
+        d:diagonal
+      });
+  graphLayer.selectAll('circle.node')
+    .data(nodes)
+    .enter().append('circle')
+      .attr({
+        r:function(d){return sizeScale(d.size);},
+        stroke:'none',
+        fill:function(d){return color(d);},
+        cx:function(d){return d.x;},
+        cy:function(d){return d.y;}
+      })
+      .on('click', function(d){console.log(d);});
+});
+
+d3.select(self.frameElement).style('height', height + 'px');
+
+</script>

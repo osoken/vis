@@ -1,0 +1,44 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+
+var obj = {};
+
+var except = [];
+
+var dig = function(p, d)
+{
+  try
+  {
+    var stat = fs.statSync(p +'/'+ d);
+    if (stat.isDirectory())
+    {
+      return {'name':d, timestamp: stat.mtime.getTime(), children: fs.readdirSync(p+'/'+d).filter(function(dd){return except.indexOf(dd)==-1;}).map(function(dd){return dig(p+'/'+d, dd)})};
+    }
+    if (stat.isFile())
+    {
+      return {'name':d, timestamp: stat.mtime.getTime(), size:stat.size};
+    }
+    return null;
+  }
+  catch (e)
+  {
+    return null;
+  }
+}
+
+var args = process.argv.slice(2);
+if (args.length > 0)
+{
+  var target = args[0];
+  except = args.slice(1);
+  try
+  {
+    obj = dig('.',target);
+  }
+  catch(e)
+  {
+
+  }
+}
+process.stdout.write(JSON.stringify(obj));
