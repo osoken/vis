@@ -16,7 +16,10 @@ var tree = d3.layout.tree()
   .size([ graphWidth, graphHeight ]);
 var force = d3.layout.force()
   .size([ graphWidth, graphHeight ])
-  .gravity(1);
+  .gravity(1)
+  .charge(-100)
+  .linkDistance(2)
+  .linkStrength(0.9);
 
 var diagonal = d3.svg.diagonal()
     .projection(function(d) { return [d.x,d.y]; });
@@ -25,7 +28,7 @@ var svg = d3.select('body').append('svg').attr({width:width,height:height});
 
 var graphLayer = svg.append('g').attr('transform','translate('+margin.left+','+margin.top+')');
 
-var sizeScale = d3.scale.sqrt().range([2,16]);
+var sizeScale = d3.scale.sqrt().range([4,32]);
 var widthScale = d3.scale.linear().range([1,8]);
 var hueScale = d3.scale.ordinal().rangePoints([0,360]);
 
@@ -132,9 +135,9 @@ d3.json('/data/tree/file.json', function(err, data)
       {
         return '#000';
       }
-      return d3.hsl(d3.sum(d.ext, function(dd){return dd.count/d.count * hueScale(dd.value);}),0.75,0.5);
+      return d3.hsl(d3.sum(d.ext, function(dd){return dd.count/d.count * hueScale(dd.value);}),1.0,0.6);
     }
-    return d3.hsl(d3.sum(d.ext, function(dd){return dd.size/d.size * hueScale(dd.value);}),0.75,0.5);
+    return d3.hsl(d3.sum(d.ext, function(dd){return dd.size/d.size * hueScale(dd.value);}),1.0,0.6);
   };
 
   graphLayer.selectAll('path.link')
@@ -152,12 +155,13 @@ d3.json('/data/tree/file.json', function(err, data)
       .attr({
         class:'node',
         r:function(d){return sizeScale(d.size);},
-        stroke:'none',
+        stroke:'#FFF',
         fill:function(d){return color(d);},
         cx:function(d){return d.x;},
         cy:function(d){return d.y;}
       })
-      .on('click', function(d){console.log(d);});
+      .on('click', function(d){console.log(d);})
+      .call(force.drag);
   force.on('tick', function()
   {
     data.x = graphWidth/2;
