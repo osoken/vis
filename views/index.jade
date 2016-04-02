@@ -5,3 +5,10 @@ block stylesheets
 block javascripts
 
 block content
+  ul
+    each categ in tree.children
+      li= categ.name
+      ul
+        each chart in categ.children
+          li
+            a(href='charts/'+categ.name+'/'+chart.name)=chart.name.replace(/\.html$/, '')
