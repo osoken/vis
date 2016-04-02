@@ -6,9 +6,9 @@ block javascripts
 
 block content
   ul
-    li geo
+    each categ in tree.children
+      li= categ.name
       ul
-        li
-          a(href='charts/geo/cartogram.html') cartogram
-        li
-          a(href='charts/geo/choropleth-map.html') choropleth-map
+        each chart in categ.children
+          li
+            a(href='charts/'+categ.name+'/'+chart.name)=chart.name.replace(/\.html$/, '')
